@@ -1,19 +1,10 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>AR Experience</title>
-
-    <!-- CORRECT script order per official MindAR docs -->
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/dist/mindar-image.prod.js"></script>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
-    <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      html, body { width: 100%; height: 100%; overflow: hidden; }
-    </style>
   </head>
   <body>
     <a-scene
@@ -28,19 +19,17 @@
           id="ar-video"
           src="./video.mp4"
           preload="auto"
-          autoplay
           loop
           muted
           playsinline
-          webkit-playsinline>
+          webkit-playsinline
+          crossorigin="anonymous">
         </video>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-entity mindar-image-target="targetIndex: 0">
-        <!-- width=1 matches the target image width -->
-        <!-- height=0.5625 for 16:9 video | change to 1 for square | 1.333 for portrait -->
         <a-plane
           src="#ar-video"
           position="0 0 0"
@@ -53,18 +42,16 @@
     </a-scene>
 
     <script>
-      // Play video only when target is found (required for iOS)
-      document.querySelector('a-scene').addEventListener('loaded', function () {
-        const target = document.querySelector('[mindar-image-target]');
-        const video = document.getElementById('ar-video');
+      const scene = document.querySelector('a-scene');
+      const video = document.getElementById('ar-video');
+      const target = document.querySelector('[mindar-image-target]');
 
-        target.addEventListener('targetFound', function () {
-          video.play();
-        });
+      target.addEventListener('targetFound', function () {
+        video.play();
+      });
 
-        target.addEventListener('targetLost', function () {
-          video.pause();
-        });
+      target.addEventListener('targetLost', function () {
+        video.pause();
       });
     </script>
   </body>
