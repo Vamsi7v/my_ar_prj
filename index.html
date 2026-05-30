@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+  <title>AR Experience</title>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: Arial, sans-serif; }
+
+    #loading-screen {
+      position: fixed; inset: 0; background: #000;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 999; color: #fff; gap: 20px;
+    }
+    #loading-screen h2 { font-size: 20px; font-weight: 500; }
+    #loading-screen p  { font-size: 13px; color: rgba(255,255,255,0.5); text-align: center; padding: 0 2rem; }
+    .spinner {
+      width: 40px; height: 40px; border: 2px solid rgba(255,255,255,0.15);
+      border-top-color: #fff; border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #ui-overlay {
+      position: fixed; inset: 0; z-index: 100;
+      pointer-events: none; display: none;
+    }
+
+    #top-bar {
+      position: absolute; top: 0; left: 0; right: 0;
+      padding: 16px 20px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    #status-badge {
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 100px; padding: 7px 16px;
+      font-size: 12px; color: rgba(255,255,255,0.8);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .dot {
+      width: 7px; height: 7px; border-radius: 50%; background: #22c55e;
+      animation: pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+    #scan-hint {
+      position: absolute; bottom: 100px; left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 100px; padding: 12px 24px;
+      font-size: 13px; color: rgba(255,255,255,0.75);
+      white-space: nowrap; transition: all 0.4s;
+    }
+    #scan-hint.found {
+      background: rgba(34,197,94,0.2);
+      border-color: rgba(34,197,94,0.4);
+      color: #86efac;
+    }
+
+    a-scene { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <h2>Starting AR camera…</h2>
+  <p>Allow camera permission when prompted, then point at your target image.</p>
+</div>
+
+<div id="ui-overlay">
+  <div id="top-bar">
+    <div id="status-badge">
+      <span class="dot"></span>
+      <span id="status-text">Scanning…</span>
+    </div>
+  </div>
+  <div id="scan-hint">Point camera at the target image</div>
+</div>
+
+<a-scene
+  id="ar-scene"
+  mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.001; filterBeta:0.001; missTolerance:5; warmupTolerance:5"
+  color-space="sRGB"
+  renderer="colorManagement:true"
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:false">
+
+  <a-assets>
+    <video
+      id="ar-video"
+      src="video.mp4"
+      preload="auto"
+      loop
+      muted
+      playsinline
+      webkit-playsinline
+      crossorigin="anonymous">
+    </video>
+  </a-assets>
+
+  <a-camera position="0 0 0" look-controls="enabled:false"></a-camera>
+
+  <a-entity mindar-image-target="targetIndex:0">
+    <!-- height="0.5625" = 16:9 landscape | height="1" = square | height="1.333" = portrait -->
+    <a-plane
+      id="ar-plane"
+      position="0 0 0"
+      width="1" height="0.5625"
+      material="src:#ar-video; shader:flat; side:double">
+    </a-plane>
+  </a-entity>
+
+</a-scene>
+
+<script>
+  const scene    = document.getElementById('ar-scene');
+  const video    = document.getElementById('ar-video');
+  const loading  = document.getElementById('loading-screen');
+  const overlay  = document.getElementById('ui-overlay');
+  const hint     = document.getElementById('scan-hint');
+  const statusTx = document.getElementById('status-text');
+
+  scene.addEventListener('loaded', () => {
+    loading.style.display = 'none';
+    overlay.style.display = 'block';
+  });
+
+  const target = document.querySelector('[mindar-image-target]');
+
+  target.addEventListener('targetFound', () => {
+    video.play().catch(() => {});
+    hint.classList.add('found');
+    hint.textContent = 'Playing…';
+    statusTx.textContent = 'Target found';
+  });
+
+  target.addEventListener('targetLost', () => {
+    video.pause();
+    hint.classList.remove('found');
+    hint.textContent = 'Point camera at the target image';
+    statusTx.textContent = 'Scanning…';
+  });
+</script>
+</body>
+</html>
