@@ -1,200 +1,71 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
-  <title>AR Experience</title>
-  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: Arial, sans-serif; }
+<html>
+  <head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>AR Experience</title>
 
-    /* TAP TO START screen */
-    #start-screen {
-      position: fixed; inset: 0; background: #000;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      z-index: 9999; color: #fff; gap: 24px;
-      cursor: pointer;
-    }
-    #start-screen h2 { font-size: 22px; font-weight: 600; }
-    #start-screen p  { font-size: 14px; color: rgba(255,255,255,0.5); text-align: center; padding: 0 2rem; }
-    #start-btn {
-      background: #fff; color: #000;
-      border: none; border-radius: 100px;
-      padding: 14px 36px; font-size: 16px; font-weight: 600;
-      cursor: pointer;
-    }
+    <!-- CORRECT script order per official MindAR docs -->
+    <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/dist/mindar-image.prod.js"></script>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
-    /* LOADING screen */
-    #loading-screen {
-      position: fixed; inset: 0; background: #000;
-      display: none; flex-direction: column;
-      align-items: center; justify-content: center;
-      z-index: 999; color: #fff; gap: 20px;
-    }
-    #loading-screen h2 { font-size: 20px; font-weight: 500; }
-    #loading-screen p  { font-size: 13px; color: rgba(255,255,255,0.5); text-align: center; padding: 0 2rem; }
-    .spinner {
-      width: 40px; height: 40px;
-      border: 2px solid rgba(255,255,255,0.15);
-      border-top-color: #fff; border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 100%; height: 100%; overflow: hidden; }
+    </style>
+  </head>
+  <body>
+    <a-scene
+      mindar-image="imageTargetSrc: ./targets.mind;"
+      color-space="sRGB"
+      renderer="colorManagement: true, physicallyCorrectLights"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false">
 
-    /* UI OVERLAY */
-    #ui-overlay {
-      position: fixed; inset: 0; z-index: 100;
-      pointer-events: none; display: none;
-    }
-    #top-bar {
-      position: absolute; top: 0; left: 0; right: 0;
-      padding: 16px 20px;
-    }
-    #status-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: rgba(0,0,0,0.55); backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 100px; padding: 7px 16px;
-      font-size: 12px; color: rgba(255,255,255,0.8);
-    }
-    .dot {
-      width: 7px; height: 7px; border-radius: 50%; background: #22c55e;
-      animation: pulse 1.6s ease-in-out infinite;
-    }
-    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
-    #scan-hint {
-      position: absolute; bottom: 100px; left: 50%;
-      transform: translateX(-50%);
-      background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 100px; padding: 12px 24px;
-      font-size: 13px; color: rgba(255,255,255,0.75);
-      white-space: nowrap; transition: all 0.4s;
-    }
-    #scan-hint.found {
-      background: rgba(34,197,94,0.2);
-      border-color: rgba(34,197,94,0.4);
-      color: #86efac;
-    }
+      <a-assets>
+        <video
+          id="ar-video"
+          src="./video.mp4"
+          preload="auto"
+          autoplay
+          loop
+          muted
+          playsinline
+          webkit-playsinline>
+        </video>
+      </a-assets>
 
-    a-scene { width: 100vw; height: 100vh; }
-  </style>
-</head>
-<body>
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-<!-- Step 1: Tap to unlock video (required by mobile browsers) -->
-<div id="start-screen">
-  <h2>AR Experience</h2>
-  <p>Tap the button below to start the camera and allow permissions.</p>
-  <button id="start-btn">Tap to Start</button>
-</div>
+      <a-entity mindar-image-target="targetIndex: 0">
+        <!-- width=1 matches the target image width -->
+        <!-- height=0.5625 for 16:9 video | change to 1 for square | 1.333 for portrait -->
+        <a-plane
+          src="#ar-video"
+          position="0 0 0"
+          width="1"
+          height="0.5625"
+          rotation="0 0 0">
+        </a-plane>
+      </a-entity>
 
-<!-- Step 2: Loading while MindAR initialises -->
-<div id="loading-screen">
-  <div class="spinner"></div>
-  <h2>Loading AR…</h2>
-  <p>Allow camera permission when prompted.</p>
-</div>
+    </a-scene>
 
-<!-- Step 3: AR running UI -->
-<div id="ui-overlay">
-  <div id="top-bar">
-    <div id="status-badge">
-      <span class="dot"></span>
-      <span id="status-text">Scanning…</span>
-    </div>
-  </div>
-  <div id="scan-hint">Point camera at the target image</div>
-</div>
+    <script>
+      // Play video only when target is found (required for iOS)
+      document.querySelector('a-scene').addEventListener('loaded', function () {
+        const target = document.querySelector('[mindar-image-target]');
+        const video = document.getElementById('ar-video');
 
-<a-scene
-  id="ar-scene"
-  mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.001; filterBeta:0.001; missTolerance:5; warmupTolerance:5"
-  color-space="sRGB"
-  renderer="colorManagement: true, physicallyCorrectLights"
-  vr-mode-ui="enabled: false"
-  device-orientation-permission-ui="enabled: false">
+        target.addEventListener('targetFound', function () {
+          video.play();
+        });
 
-  <a-assets>
-    <video
-      id="ar-video"
-      src="./video.mp4"
-      preload="auto"
-      loop
-      muted
-      playsinline
-      webkit-playsinline
-      crossorigin="anonymous">
-    </video>
-  </a-assets>
-
-  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-
-  <a-entity mindar-image-target="targetIndex: 0">
-    <!-- 16:9 landscape = 0.5625 | square = 1 | portrait = 1.333 -->
-    <a-plane
-      id="ar-plane"
-      position="0 0 0"
-      width="1" height="0.5625"
-      material="src: #ar-video; shader: flat; side: double">
-    </a-plane>
-  </a-entity>
-
-</a-scene>
-
-<script>
-  const startScreen = document.getElementById('start-screen');
-  const loadingScreen = document.getElementById('loading-screen');
-  const overlay  = document.getElementById('ui-overlay');
-  const hint     = document.getElementById('scan-hint');
-  const statusTx = document.getElementById('status-text');
-  const scene    = document.getElementById('ar-scene');
-  const video    = document.getElementById('ar-video');
-
-  document.getElementById('start-btn').addEventListener('click', () => {
-    // 1. User gesture unlocks video playback on mobile
-    video.play().then(() => {
-      video.pause(); // just unlocking, not actually playing yet
-    }).catch(() => {});
-
-    // 2. Show loading, hide start screen
-    startScreen.style.display = 'none';
-    loadingScreen.style.display = 'flex';
-
-    // 3. Now start MindAR
-    const sceneEl = document.querySelector('a-scene');
-    if (sceneEl.hasLoaded) {
-      onSceneLoaded();
-    } else {
-      sceneEl.addEventListener('loaded', onSceneLoaded);
-    }
-  });
-
-  function onSceneLoaded() {
-    loadingScreen.style.display = 'none';
-    overlay.style.display = 'block';
-  }
-
-  const target = document.querySelector('[mindar-image-target]');
-
-  target.addEventListener('targetFound', () => {
-    // Re-play after user gesture unlocked it
-    video.currentTime = 0;
-    video.play().catch(() => {});
-    hint.classList.add('found');
-    hint.textContent = 'Playing…';
-    statusTx.textContent = 'Target found';
-  });
-
-  target.addEventListener('targetLost', () => {
-    video.pause();
-    hint.classList.remove('found');
-    hint.textContent = 'Point camera at the target image';
-    statusTx.textContent = 'Scanning…';
-  });
-</script>
-</body>
+        target.addEventListener('targetLost', function () {
+          video.pause();
+        });
+      });
+    </script>
+  </body>
 </html>
