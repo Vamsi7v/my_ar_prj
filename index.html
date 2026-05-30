@@ -39,6 +39,7 @@
   </a-assets>
 
   <a-camera
+    camera
     position="0 0 0"
     look-controls="enabled: false">
   </a-camera>
@@ -48,6 +49,7 @@
     mindar-image-target="targetIndex: 0">
 
     <a-video
+      id="videoPlane"
       src="#ar-video"
       width="1.6"
       height="0.9"
@@ -56,26 +58,82 @@
 
   </a-entity>
 
+  <a-entity id="worldAnchor"></a-entity>
+
 </a-scene>
 
 <script>
+
+AFRAME.registerComponent('grow-with-distance', {
+  tick: function () {
+
+    const camera = document.querySelector('[camera]');
+    if (!camera) return;
+
+    const camPos = camera.object3D.getWorldPosition(
+      new THREE.Vector3()
+    );
+
+    const objPos = this.el.object3D.getWorldPosition(
+      new THREE.Vector3()
+    );
+
+    const distance = camPos.distanceTo(objPos);
+
+    let scale = distance * 1.5;
+
+    scale = Math.max(1, scale);
+    scale = Math.min(10, scale);
+
+    this.el.object3D.scale.set(
+      scale,
+      scale,
+      scale
+    );
+  }
+});
+
 document.addEventListener("DOMContentLoaded", () => {
 
-  const video = document.getElementById("ar-video");
   const target = document.getElementById("target");
+  const videoPlane = document.getElementById("videoPlane");
+  const worldAnchor = document.getElementById("worldAnchor");
+  const video = document.getElementById("ar-video");
+
+  let locked = false;
 
   target.addEventListener("targetFound", async () => {
+
+    if (locked) return;
+
+    locked = true;
+
+    const pos = new THREE.Vector3();
+    const quat = new THREE.Quaternion();
+
+    videoPlane.object3D.getWorldPosition(pos);
+    videoPlane.object3D.getWorldQuaternion(quat);
+
+    worldAnchor.object3D.position.copy(pos);
+    worldAnchor.object3D.quaternion.copy(quat);
+
+    videoPlane.parentNode.removeChild(videoPlane);
+
+    worldAnchor.appendChild(videoPlane);
+
+    videoPlane.setAttribute(
+      "grow-with-distance",
+      ""
+    );
+
     try {
       video.currentTime = 0;
       await video.play();
-      console.log("Video Playing");
-    } catch(e) {
+    } catch (e) {
       console.error(e);
     }
-  });
 
-  target.addEventListener("targetLost", () => {
-    video.pause();
+    console.log("AR Locked");
   });
 
 });
