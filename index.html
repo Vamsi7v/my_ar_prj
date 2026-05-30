@@ -50,7 +50,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const sceneEl = document.querySelector("a-scene");
   const camera  = document.querySelector("a-camera");
 
+  let arSystem;
   let found = false;
+
+  sceneEl.addEventListener("loaded", () => {
+    arSystem = sceneEl.systems["mindar-image-system"];
+  });
 
   target.addEventListener("targetFound", async () => {
     if (found) return;
@@ -63,27 +68,17 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error(e);
     }
 
-    // Wait one frame so MindAR has set the final position/rotation
+    // Wait briefly so MindAR locks the position first
     setTimeout(() => {
-      // Grab target's current world position and rotation
-      const worldPos  = new THREE.Vector3();
-      const worldQuat = new THREE.Quaternion();
-      const worldScale = new THREE.Vector3();
-      target.object3D.getWorldPosition(worldPos);
-      target.object3D.getWorldQuaternion(worldQuat);
-      target.object3D.getWorldScale(worldScale);
-
-      // Detach from MindAR target and attach to scene root
+      // Detach content from MindAR target and fix it to scene root
       sceneEl.object3D.attach(target.object3D);
 
-      // Stop MindAR scanning
-      const mindARSystem = sceneEl.systems["mindar-image-system"];
-      if (mindARSystem) mindARSystem.pause();
+      // Stop MindAR completely
+      if (arSystem) arSystem.stop();
 
-      // Re-enable look controls so camera can pan freely
+      // Enable free camera movement
       camera.setAttribute("look-controls", "enabled: true");
-
-    }, 100);
+    }, 300);
   });
 });
 </script>
