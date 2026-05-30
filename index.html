@@ -3,20 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-
   <style>
-    body {
-      margin: 0;
-      overflow: hidden;
-    }
+    body { margin: 0; overflow: hidden; }
   </style>
 </head>
-
 <body>
-
 <a-scene
   mindar-image="imageTargetSrc: ./targets.mind;"
   color-space="sRGB"
@@ -27,7 +20,7 @@
   <a-assets>
     <video
       id="ar-video"
-      src="https://res.cloudinary.com/drv486zqa/video/upload/v1780136300/Flow_202604172319_hhxsgz.mp4"
+      src="./video.mp4"
       preload="auto"
       autoplay
       muted
@@ -38,48 +31,86 @@
     </video>
   </a-assets>
 
-  <a-camera
-    position="0 0 0"
-    look-controls="enabled: false">
-  </a-camera>
+  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-  <a-entity
-    id="target"
-    mindar-image-target="targetIndex: 0">
-
+  <a-entity id="target" mindar-image-target="targetIndex: 0">
     <a-video
+      id="ar-plane"
       src="#ar-video"
       width="1.6"
       height="0.9"
       position="0 0 0">
     </a-video>
-
   </a-entity>
 
 </a-scene>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+  const video   = document.getElementById("ar-video");
+  const target  = document.getElementById("target");
+  const plane   = document.getElementById("ar-plane");
+  const sceneEl = document.querySelector("a-scene");
 
-  const video = document.getElementById("ar-video");
-  const target = document.getElementById("target");
+  let found = false;
+  let lastScale = 1;
 
+  // Once target is found — play video, detach from tracker, stop MindAR
   target.addEventListener("targetFound", async () => {
+    if (found) return; // already handled
+    found = true;
+
     try {
       video.currentTime = 0;
       await video.play();
-      console.log("Video Playing");
     } catch(e) {
       console.error(e);
     }
-  });
 
-  target.addEventListener("targetLost", () => {
-    video.pause();
-  });
+    // Grab current world position/rotation of the plane
+    const worldPos = new THREE.Vector3();
+    const worldQuat = new THREE.Quaternion();
+    const worldScale = new THREE.Vector3();
+    plane.object3D.getWorldPosition(worldPos);
+    plane.object3D.getWorldQuaternion(worldQuat);
+    plane.object3D.getWorldScale(worldScale);
 
+    // Detach plane from target entity and attach to scene root
+    const scene3D = sceneEl.object3D;
+    scene3D.attach(plane.object3D);
+
+    // Stop MindAR tracking so camera stays live but no more scanning
+    const mindARSystem = sceneEl.systems["mindar-image-system"];
+    if (mindARSystem) mindARSystem.pause();
+
+    // Now track camera distance and scale the video accordingly
+    const camera = document.querySelector("a-camera").object3D;
+
+    function scaleWithDistance() {
+      if (!found) return;
+
+      const camPos = new THREE.Vector3();
+      camera.getWorldPosition(camPos);
+
+      const videoPos = new THREE.Vector3();
+      plane.object3D.getWorldPosition(videoPos);
+
+      const dist = camPos.distanceTo(videoPos);
+
+      // Base distance ~1.5 units = scale 1. Scale grows as you move away.
+      const baseDistance = 1.5;
+      const newScale = Math.max(0.5, dist / baseDistance);
+
+      // Smooth it slightly
+      lastScale = lastScale + (newScale - lastScale) * 0.1;
+      plane.object3D.scale.set(lastScale, lastScale, lastScale);
+
+      requestAnimationFrame(scaleWithDistance);
+    }
+
+    scaleWithDistance();
+  });
 });
 </script>
-
 </body>
 </html>
