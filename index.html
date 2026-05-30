@@ -54,18 +54,13 @@ document.addEventListener("DOMContentLoaded", () => {
     video.pause();
   });
 
-  // Run every frame
   const sceneEl = document.querySelector("a-scene");
   sceneEl.addEventListener("renderstart", () => {
     sceneEl.renderer.setAnimationLoop(() => {
-      // MindAR stores distance to target in the camera Z after projection
-      // We read the target's scale set by MindAR, then compensate
       const mindARScale = target.object3D.scale.x;
       if (mindARScale > 0) {
-        // Inverse the MindAR scale and multiply by a fixed big size
-        // so it stays constant size regardless of distance
-        // Then add extra so it grows instead of shrinks
-        const compensated = (1 / mindARScale) * 1.2;
+        // 0.6 = base size (tune this down if still too big)
+        const compensated = (1 / mindARScale) * 0.6;
         plane.object3D.scale.set(compensated, compensated, compensated);
       }
     });
