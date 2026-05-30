@@ -11,7 +11,7 @@
 </head>
 <body>
 <a-scene
-  mindar-image="imageTargetSrc: ./targets.mind;"
+  mindar-image="imageTargetSrc: ./targets.mind; missTolerance: 999"
   color-space="sRGB"
   renderer="colorManagement: true"
   vr-mode-ui="enabled: false"
@@ -45,17 +45,11 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const video   = document.getElementById("ar-video");
-  const target  = document.getElementById("target");
-  const sceneEl = document.querySelector("a-scene");
-  const camera  = document.querySelector("a-camera");
+  const video  = document.getElementById("ar-video");
+  const target = document.getElementById("target");
+  const camera = document.querySelector("a-camera");
 
-  let arSystem;
   let found = false;
-
-  sceneEl.addEventListener("loaded", () => {
-    arSystem = sceneEl.systems["mindar-image-system"];
-  });
 
   target.addEventListener("targetFound", async () => {
     if (found) return;
@@ -68,17 +62,15 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error(e);
     }
 
-    // Wait briefly so MindAR locks the position first
-    setTimeout(() => {
-      // Detach content from MindAR target and fix it to scene root
-      sceneEl.object3D.attach(target.object3D);
+    // Enable free camera pan once target is found
+    camera.setAttribute("look-controls", "enabled: true");
+  });
 
-      // Stop MindAR completely
-      if (arSystem) arSystem.stop();
-
-      // Enable free camera movement
-      camera.setAttribute("look-controls", "enabled: true");
-    }, 300);
+  // missTolerance:999 above already prevents hiding
+  // but also block it here just in case
+  target.addEventListener("targetLost", () => {
+    if (found) return; // ignore lost once found
+    video.pause();
   });
 });
 </script>
