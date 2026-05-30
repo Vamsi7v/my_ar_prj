@@ -1,17 +1,24 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-  <style>
-    body { margin: 0; overflow: hidden; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+<style>
+body {
+  margin: 0;
+  overflow: hidden;
+}
+</style>
 </head>
+
 <body>
+
 <a-scene
-  mindar-image="imageTargetSrc: ./targets.mind; missTolerance: 999"
+  mindar-image="imageTargetSrc: ./targets.mind;"
   color-space="sRGB"
   renderer="colorManagement: true"
   vr-mode-ui="enabled: false"
@@ -22,57 +29,127 @@
       id="ar-video"
       src="https://res.cloudinary.com/drv486zqa/video/upload/v1780136300/Flow_202604172319_hhxsgz.mp4"
       preload="auto"
-      autoplay
       muted
-      loop
       playsinline
       webkit-playsinline
-      crossorigin="anonymous">
+      crossorigin="anonymous"
+      loop>
     </video>
-    <img id="top-img" src="./top.jpg" crossorigin="anonymous"/>
-    <img id="bottom-img" src="./bottom.jpeg" crossorigin="anonymous"/>
+
+    <img id="top-img" src="./top.jpg">
+    <img id="bottom-img" src="./bottom.jpeg">
   </a-assets>
 
-  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+  <a-camera position="0 0 0"></a-camera>
 
+  <!-- Detection target -->
   <a-entity id="target" mindar-image-target="targetIndex: 0">
-    <a-image src="#top-img" width="1.6" height="2" position="0 2.3 0"></a-image>
-    <a-video id="ar-plane" src="#ar-video" width="1.6" height="0.9" position="0 0 0"></a-video>
-    <a-image src="#bottom-img" width="1.6" height="2" position="0 -2.3 0"></a-image>
+
+    <a-image
+      src="#top-img"
+      width="1.6"
+      height="2"
+      position="0 2.3 0">
+    </a-image>
+
+    <a-video
+      src="#ar-video"
+      width="1.6"
+      height="0.9"
+      position="0 0 0">
+    </a-video>
+
+    <a-image
+      src="#bottom-img"
+      width="1.6"
+      height="2"
+      position="0 -2.3 0">
+    </a-image>
+
   </a-entity>
 
 </a-scene>
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-  const video  = document.getElementById("ar-video");
-  const target = document.getElementById("target");
-  const camera = document.querySelector("a-camera");
 
-  let found = false;
+  const scene = document.querySelector("a-scene");
+  const target = document.getElementById("target");
+  const video = document.getElementById("ar-video");
+
+  let spawned = false;
 
   target.addEventListener("targetFound", async () => {
-    if (found) return;
-    found = true;
+
+    if (spawned) return;
+
+    spawned = true;
 
     try {
       video.currentTime = 0;
       await video.play();
     } catch(e) {
-      console.error(e);
+      console.log(e);
     }
 
-    // Enable free camera pan once target is found
-    camera.setAttribute("look-controls", "enabled: true");
+    // Get detected position
+    const pos = new THREE.Vector3();
+    const quat = new THREE.Quaternion();
+
+    target.object3D.getWorldPosition(pos);
+    target.object3D.getWorldQuaternion(quat);
+
+    // Create floating panel
+    const panel = document.createElement("a-entity");
+
+    panel.object3D.position.copy(pos);
+    panel.object3D.quaternion.copy(quat);
+
+    // Move slightly forward
+    panel.object3D.position.z -= 0.3;
+
+    // Floating animation
+    panel.setAttribute(
+      "animation",
+      "property: position; dir: alternate; dur: 2500; loop: true; to: " +
+      pos.x + " " + (pos.y + 0.08) + " " + pos.z
+    );
+
+    // Top image
+    const topImage = document.createElement("a-image");
+    topImage.setAttribute("src", "#top-img");
+    topImage.setAttribute("width", "1.6");
+    topImage.setAttribute("height", "2");
+    topImage.setAttribute("position", "0 2.3 0");
+
+    // Video
+    const videoPlane = document.createElement("a-video");
+    videoPlane.setAttribute("src", "#ar-video");
+    videoPlane.setAttribute("width", "1.6");
+    videoPlane.setAttribute("height", "0.9");
+    videoPlane.setAttribute("position", "0 0 0");
+
+    // Bottom image
+    const bottomImage = document.createElement("a-image");
+    bottomImage.setAttribute("src", "#bottom-img");
+    bottomImage.setAttribute("width", "1.6");
+    bottomImage.setAttribute("height", "2");
+    bottomImage.setAttribute("position", "0 -2.3 0");
+
+    panel.appendChild(topImage);
+    panel.appendChild(videoPlane);
+    panel.appendChild(bottomImage);
+
+    scene.appendChild(panel);
+
+    // Hide original tracked content
+    target.setAttribute("visible", "false");
+
+    console.log("AR Panel Spawned");
   });
 
-  // missTolerance:999 above already prevents hiding
-  // but also block it here just in case
-  target.addEventListener("targetLost", () => {
-    if (found) return; // ignore lost once found
-    video.pause();
-  });
 });
 </script>
+
 </body>
 </html>
