@@ -41,8 +41,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const plane  = document.getElementById("ar-plane");
   const camera = document.querySelector("a-camera");
 
-  let animating = false;
-
   target.addEventListener("targetFound", async () => {
     try {
       video.currentTime = 0;
@@ -50,33 +48,27 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch(e) {
       console.error(e);
     }
-
-    if (animating) return;
-    animating = true;
-
-    function updateScale() {
-      // Get camera world position
-      const camPos = new THREE.Vector3();
-      camera.object3D.getWorldPosition(camPos);
-
-      // Get video plane world position
-      const planePos = new THREE.Vector3();
-      plane.object3D.getWorldPosition(planePos);
-
-      const dist  = camPos.distanceTo(planePos);
-      // Scale the plane itself, not the target
-      // At dist=1 → scale=1, at dist=3 → scale=3
-      const scale = Math.max(0.5, dist);
-      plane.object3D.scale.set(scale, scale, scale);
-
-      requestAnimationFrame(updateScale);
-    }
-    updateScale();
   });
 
   target.addEventListener("targetLost", () => {
     video.pause();
-    animating = false;
+  });
+
+  // Run every frame
+  const sceneEl = document.querySelector("a-scene");
+  sceneEl.addEventListener("renderstart", () => {
+    sceneEl.renderer.setAnimationLoop(() => {
+      // MindAR stores distance to target in the camera Z after projection
+      // We read the target's scale set by MindAR, then compensate
+      const mindARScale = target.object3D.scale.x;
+      if (mindARScale > 0) {
+        // Inverse the MindAR scale and multiply by a fixed big size
+        // so it stays constant size regardless of distance
+        // Then add extra so it grows instead of shrinks
+        const compensated = (1 / mindARScale) * 1.2;
+        plane.object3D.scale.set(compensated, compensated, compensated);
+      }
+    });
   });
 });
 </script>
