@@ -38,8 +38,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   const video  = document.getElementById("ar-video");
   const target = document.getElementById("target");
-  const plane  = document.getElementById("ar-plane");
-  const camera = document.querySelector("a-camera");
 
   target.addEventListener("targetFound", async () => {
     try {
@@ -52,18 +50,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   target.addEventListener("targetLost", () => {
     video.pause();
-  });
-
-  const sceneEl = document.querySelector("a-scene");
-  sceneEl.addEventListener("renderstart", () => {
-    sceneEl.renderer.setAnimationLoop(() => {
-      const mindARScale = target.object3D.scale.x;
-      if (mindARScale > 0) {
-        // 0.6 = base size (tune this down if still too big)
-        const compensated = (1 / mindARScale) * 0.6;
-        plane.object3D.scale.set(compensated, compensated, compensated);
-      }
-    });
   });
 });
 </script>
